@@ -1,11 +1,3 @@
-# navi Browser 🌐
-A lightweight, minimal web browser built with Python and PyQt5 and PyQt6.
-
-## 📥 Download
-**👉 [Download version 1 here, use the command prompt below for the lastest version](https://github.com/omxrprob/navi-browser/releases/latest)**  
-After downloading, just run the `OmxrBrowser.exe` file.
-
-> ⚠️ Windows might show a warning — click **More info → Run anyway**.
 
 [join our discord server for more information](https://discord.gg/2ps9Fq6fpH)
 
@@ -36,3 +28,6 @@ that below is the logo if anyone wants it
 
 this part is honestly not necessery but ill add it anyways. wait nvm, i got dinner. ill finish this later.
 ok im back guys, anyways. i just wanted to say that this version of navi is PyQt6, but the new version will use ImGui, which is why i added the license. you are still allowed to use this version and copy it, i really dont care, anyways, ImGui version is coming soon!
+
+# navi has gotten a BIG update
+after a year of not doing shit, i added a lot of privacy features. have fun, i’ll probably be gone for months now.
