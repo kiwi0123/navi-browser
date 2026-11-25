@@ -17,7 +17,7 @@ pip install -r requirements.txt
 ```
 hit enter again, after that is the last step, do this:
 ```
-python simple_browser.py
+python main.py
 ```
 that below is the logo if anyone wants it
 <img src="betterlogo.png">
