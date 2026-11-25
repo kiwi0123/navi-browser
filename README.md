@@ -1,6 +1,6 @@
 [join our discord server for more information](https://discord.gg/2ps9Fq6fpH)
 
-## 🛠️ How to Build
+## 🛠️ How to Build and download
 
 ### Windows
 
