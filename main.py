@@ -441,7 +441,7 @@ class TOSDialog(QDialog):
             <p><b>3. Illegal Activity:</b> Any illegal activity performed while using Navi is the sole liability of the user.</p>
             <p><b>4. Data P2P:</b> Your IP address may be used to facilitate connections in TNN mode.</p>
             <hr>
-            <p align='center'><i>Clicking "Accept" constitutes a binding agreement that you alone carry all legal liability.</i></p>
+            <p align='center'><i>Clicking "Accept" or simply using this app constitutes a binding agreement that you alone carry all legal liability.</i></p>
         """)
         layout.addWidget(self.content)
         self.btn = QPushButton("I Accept and Understand the Risks")
