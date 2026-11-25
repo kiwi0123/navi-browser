@@ -5,7 +5,7 @@
 ### before i tell you how to download it, make sure you have Git and python installed in your computer.
 first do this in the terminal(microsoft shell tab):
 ```bash
-git clone https://github.com/overthrowncats/navi-browser.git
+git clone https://github.com/kiwi0123/navi-browser.git
 ```
 then hit enter, then do this:
 ```bash
