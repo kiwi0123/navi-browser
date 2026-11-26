@@ -39,6 +39,16 @@ TLD_ALIASES = {
 }
 
 TNN_TLDS = [".fav", ".favourite", ".wrn", ".warn", ".ntw", ".network", ".glbl", ".global", ".cops", ".apples", ".pw-navi"]
+WEB_TLDS = {".network", ".global"}
+
+
+def normalize_site_name(text):
+    t = text.strip().lower()
+    for prefix in ("local://", "https://", "http://"):
+        if t.startswith(prefix):
+            t = t[len(prefix):]
+            break
+    return t.split("/")[0].split("?")[0].split("#")[0].strip(".")
 
 SEARCH_ENGINES = {
     "Mainstream": {
@@ -389,7 +399,7 @@ class InternalPages:
         <html><head><style>{InternalPages.css(data['settings']['theme'])}</style></head><body>
             <div class='header'>
                 <h1>NAVI ULTIMATE</h1>
-                <p>Welcome back to the decentralized web. Private by default: no history, no saved cookies, trackers blocked.</p>
+                <p>Welcome back. Private by default: no history, no saved cookies, trackers blocked.</p>
                 <div class='nav-bar'>
                     <a href='navi://home' class='nav-link'>Home</a>
                     <a href='navi://bookmarks' class='nav-link'>Bookmarks</a>
@@ -410,8 +420,8 @@ class InternalPages:
                     <a href='navi://store' class='btn'>Spend Navits</a>
                 </div>
                 <div class='card'>
-                    <h3>🌐 TNN Site Manager</h3>
-                    <p>You have <b>{len(data['sites'])}</b> active decentralized sites.</p>
+                    <h3>🌐 Local Websites</h3>
+                    <p>You have <b>{len(data['sites'])}</b> local websites stored on this device.</p>
                     <a href='navi://pw' class='btn'>Manage Sites</a>
                 </div>
                 <div class='card'>
@@ -436,10 +446,9 @@ class TOSDialog(QDialog):
         self.content.setReadOnly(True)
         self.content.setHtml("""
             <h1 style='color: #dc3545;'>Legal Disclaimer</h1>
-            <p><b>1. End-User Responsibility:</b> The user acknowledges that Navi Browser provides access to decentralized networks (TNN) and the Dark Web (Tor). The creator is <b>NOT</b> responsible for any content hosted, visited, or distributed via these networks.</p>
-            <p><b>2. No Censorship:</b> TNN domains (.apples, .cops, .fav, etc.) are peer-to-peer. Content is stored on users' local machines. The creator has no power to remove content.</p>
+            <p><b>1. End-User Responsibility:</b> The user acknowledges that Navi Browser can connect to the internet, including through the Tor network. The creator is <b>NOT</b> responsible for any content you visit, host, or distribute using Navi.</p>
+            <p><b>2. Local Websites:</b> Websites you create in Navi (.apples, .cops, .fav, etc.) are stored only on your own device. Navi does not publish or share them.</p>
             <p><b>3. Illegal Activity:</b> Any illegal activity performed while using Navi is the sole liability of the user.</p>
-            <p><b>4. Data P2P:</b> Your IP address may be used to facilitate connections in TNN mode.</p>
             <hr>
             <p align='center'><i>Clicking "Accept" constitutes a binding agreement that you alone carry all legal liability.</i></p>
         """)
@@ -459,7 +468,7 @@ class CodeEditor(QWidget):
         self.resize(1000, 750)
         layout = QVBoxLayout()
         self.title_input = QLineEdit()
-        self.title_input.setPlaceholderText("Enter name/domain (e.g. awesome-site)")
+        self.title_input.setPlaceholderText("Enter a name (e.g. awesome-site)")
         self.code_input = QPlainTextEdit()
         self.code_input.setPlaceholderText("Paste HTML, CSS, and JS here...")
 
@@ -469,11 +478,11 @@ class CodeEditor(QWidget):
             src = main.data['sites' if mode == "site" else 'extensions'].get(key, {})
             self.code_input.setPlainText(src.get('html_content', src.get('code', '')))
 
-        self.save_btn = QPushButton("🚀 Save & Deploy to Network")
+        self.save_btn = QPushButton("💾 Save")
         self.save_btn.setStyleSheet("background: #0d6efd; color: white; padding: 15px; font-weight: bold;")
         self.save_btn.clicked.connect(self.save_data_logic)
 
-        layout.addWidget(QLabel("<b>Identity/Domain:</b>"))
+        layout.addWidget(QLabel("<b>Site name:</b>" if self.mode == "site" else "<b>Extension name:</b>"))
         layout.addWidget(self.title_input)
         layout.addWidget(QLabel("<b>Source Code:</b>"))
         layout.addWidget(self.code_input)
@@ -485,11 +494,18 @@ class CodeEditor(QWidget):
         code = self.code_input.toPlainText()
         if not name or not code: return
         if self.mode == "site":
+            if self.key is None:
+                name = re.sub(r"[^a-z0-9.-]+", "-", name.lower()).strip("-.")
+                if not name: return
             if not any(name.endswith(tld) for tld in TNN_TLDS): name += ".pw-navi"
-            self.main.data['sites'][name] = {"html_content": code, "public": True, "created": str(datetime.now())}
+            old = self.main.data['sites'].get(name, {})
+            self.main.data['sites'][name] = {"html_content": code, "public": True,
+                                             "created": old.get("created", str(datetime.now()))}
         else:
             self.main.data['extensions'][name] = {"code": code, "active": True}
         self.main.save_data()
+        if self.mode == "site":
+            self.main.refresh_site_tabs(name)
         QMessageBox.information(self, "Success", f"{self.mode.title()} saved successfully!")
         self.close()
 
@@ -521,6 +537,10 @@ class NaviWebPage(QWebEnginePage):
         error.rejectCertificate()
 
     def acceptNavigationRequest(self, url, _type, isMainFrame):
+        if url.scheme() == "local":
+            if isMainFrame and self.url().scheme() not in ("http", "https"):
+                self.view.main.open_text("local://" + url.host(), self.view)
+            return False
         if url.scheme() in ["navi", "app"]:
             if isMainFrame and self.url().scheme() not in ("http", "https"):
                 self.view.main.handle_cmd(
@@ -540,7 +560,7 @@ class NaviBrowser(QMainWindow):
 
         self.data = {
             'sites': {}, 'extensions': {}, 'navits': 50, 'tos_agreed': False,
-            'tnn_registry': {}, 'last_reward': 0, 'bookmarks': [],
+            'last_reward': 0, 'bookmarks': [],
             'settings': {
                 'theme': 'dark', 'engine': DEFAULT_ENGINE, 'network_mode': 'cleanweb',
                 'tor_port': 9050, 'block_trackers': True, 'https_only': True,
@@ -562,7 +582,6 @@ class NaviBrowser(QMainWindow):
         self.profile.downloadRequested.connect(self.on_download)
 
         self.setup_ui()
-        self.apply_network_settings()
         self.add_tab(QUrl("navi://home"))
 
         self.shield_timer = QTimer(self)
@@ -588,7 +607,7 @@ class NaviBrowser(QMainWindow):
 
         back_btn = QAction("←", self); back_btn.triggered.connect(lambda: self.tabs.currentWidget().back())
         next_btn = QAction("→", self); next_btn.triggered.connect(lambda: self.tabs.currentWidget().forward())
-        reload_btn = QAction("↻", self); reload_btn.triggered.connect(lambda: self.tabs.currentWidget().reload())
+        reload_btn = QAction("↻", self); reload_btn.triggered.connect(self.reload_current)
         home_btn = QAction("🏠", self); home_btn.triggered.connect(lambda: self.handle_cmd("navi://home", self.tabs.currentWidget()))
         new_tab_btn = QAction("+", self); new_tab_btn.triggered.connect(lambda: self.add_tab(QUrl("navi://home")))
         star_btn = QAction("☆", self); star_btn.setToolTip("Bookmark this page (Ctrl+D)"); star_btn.triggered.connect(self.add_bookmark)
@@ -628,8 +647,8 @@ class NaviBrowser(QMainWindow):
         bind("Ctrl+L", self.focus_url_bar)
         bind("Ctrl+F", self.find_in_page)
         bind("Ctrl+D", self.add_bookmark)
-        bind("Ctrl+R", current(lambda v: v.reload()))
-        bind("F5", current(lambda v: v.reload()))
+        bind("Ctrl+R", self.reload_current)
+        bind("F5", self.reload_current)
         bind("Alt+Left", current(lambda v: v.back()))
         bind("Alt+Right", current(lambda v: v.forward()))
         bind("Ctrl+=", lambda: self.zoom(0.1))
@@ -646,7 +665,64 @@ class NaviBrowser(QMainWindow):
     def on_tab_changed(self, i):
         v = self.tabs.widget(i)
         if v is not None:
-            self.url_bar.setText(v.url().toString())
+            self.url_bar.setText(self.display_url(v, v.url()))
+
+    def display_url(self, view, q):
+        name = getattr(view, "tnn_name", None)
+        if name and q.scheme() in ("about", "data", ""):
+            return name
+        return q.toString()
+
+    def reload_current(self):
+        v = self.tabs.currentWidget()
+        if v is None:
+            return
+        key = getattr(v, "tnn_name", None)
+        if key and key in self.data['sites']:
+            self.open_site(key, v)
+        else:
+            v.reload()
+
+    def find_site(self, text):
+        name = normalize_site_name(text)
+        if not name:
+            return None
+        sites = {k.lower(): k for k in self.data['sites']}
+        if name in sites:
+            return sites[name]
+        for tld, alt in TLD_ALIASES.items():
+            if name.endswith(tld) and name[:-len(tld)] + alt in sites:
+                return sites[name[:-len(tld)] + alt]
+        if "." not in name and name + ".pw-navi" in sites:
+            return sites[name + ".pw-navi"]
+        return None
+
+    def open_site(self, key, view):
+        site = self.data['sites'].get(key)
+        if site is None or view is None:
+            return
+        view.tnn_name = key
+        view.page().internal = False
+        view.setHtml(site.get('html_content', ''))
+        if view == self.tabs.currentWidget():
+            self.url_bar.setText(key)
+
+    def site_not_found(self, name, view):
+        body = (
+            "<h1>Site not found</h1>"
+            f"<p><b>{html.escape(name)}</b> isn't registered on this device.</p>"
+            "<p class='small'>Local websites are stored only on this device. Navi never looks these "
+            "names up on the internet, so nothing was sent over the network.</p>"
+            "<a href='navi://store' class='btn'>Get a name</a> "
+            "<a href='navi://pw' class='btn'>My Sites</a>"
+        )
+        self.show_internal(view, self.wrap(body))
+
+    def refresh_site_tabs(self, key):
+        for i in range(self.tabs.count()):
+            v = self.tabs.widget(i)
+            if getattr(v, "tnn_name", None) == key:
+                self.open_site(key, v)
 
     def focus_url_bar(self):
         self.url_bar.setFocus()
@@ -775,9 +851,10 @@ class NaviBrowser(QMainWindow):
     def add_tab(self, url):
         view = NaviView()
         view.main = self
+        view.tnn_name = None
         view.setPage(NaviWebPage(self.profile, view))
         apply_web_settings(view.page().settings(), self.state.block_webgl)
-        view.urlChanged.connect(lambda q: self.url_bar.setText(q.toString()) if view == self.tabs.currentWidget() else None)
+        view.urlChanged.connect(lambda q: self.url_bar.setText(self.display_url(view, q)) if view == self.tabs.currentWidget() else None)
         view.loadStarted.connect(lambda: self.status.showMessage("Loading..."))
         view.loadFinished.connect(lambda ok: self.on_load_finish(view, ok))
         idx = self.tabs.addTab(view, "New Tab")
@@ -830,17 +907,18 @@ class NaviBrowser(QMainWindow):
         if text.startswith("navi://") or text.startswith("app://"):
             self.handle_cmd(text, view); return
 
-        found_tld = next((tld for tld in TNN_TLDS if text.endswith(tld)), None)
-        if found_tld:
-            target = text
-            if found_tld in TLD_ALIASES:
-                alt = text.replace(found_tld, TLD_ALIASES[found_tld])
-                if alt in self.data['sites']: target = alt
-            if target in self.data['sites']:
-                view.page().internal = False
-                view.setHtml(self.data['sites'][target]['html_content'])
+        if " " not in text:
+            key = self.find_site(text)
+            if key:
+                self.open_site(key, view)
+                return
+            name = normalize_site_name(text)
+            tld = next((t for t in TNN_TLDS if name.endswith(t)), None)
+            if tld and tld not in WEB_TLDS:
+                self.site_not_found(name, view)
                 return
 
+        view.tnn_name = None
         host_part = text.split("/")[0].split(":")[0]
         if " " not in text and "://" in text:
             url = text
@@ -857,6 +935,7 @@ class NaviBrowser(QMainWindow):
         return f"<html><head><style>{InternalPages.css(self.data['settings']['theme'])}</style></head><body>{body}</body></html>"
 
     def show_internal(self, view, page_html):
+        view.tnn_name = None
         view.page().internal = True
         view.setHtml(page_html)
 
@@ -870,7 +949,7 @@ class NaviBrowser(QMainWindow):
         elif wants_tor:
             mode = "DIRECT (restart to switch to Tor)"
         else:
-            mode = s.get('network_mode', 'cleanweb').upper()
+            mode = "DIRECT"
         onoff = lambda b: "ON" if b else "OFF"
         return {"mode": mode, "blocked": st.blocked_count, "trackers": onoff(st.block_trackers),
                 "https": onoff(st.https_only), "cookies": onoff(st.block_3p_cookies),
@@ -898,7 +977,7 @@ class NaviBrowser(QMainWindow):
 
         modes = " ".join(
             f"<a href='navi://set/mode/{m}' class='btn'>{label}{' ✓' if s['network_mode'] == m else ''}</a>"
-            for m, label in (("cleanweb", "Direct"), ("tnn", "TNN"), ("tor", "Tor")))
+            for m, label in (("cleanweb", "Direct"), ("tor", "Tor")))
         ports = " ".join(
             f"<a href='navi://set/port/{p}' class='btn'>{p}{' ✓' if int(s.get('tor_port', 9050)) == p else ''}</a>"
             for p in (9050, 9150))
@@ -915,7 +994,7 @@ class NaviBrowser(QMainWindow):
             "<select id='engine' onchange='window.location.href=\"navi://set/engine/\" + encodeURIComponent(this.value)'>"
             f"{engines}</select></div>"
             "<div class='card'><h3>Theme</h3><a href='navi://set/theme/dark' class='btn'>Dark</a> "
-            "<a href='navi://set/theme/light' class='btn'>Light</a> <a href='navi://set/theme/tnn' class='btn'>TNN Neon</a></div>"
+            "<a href='navi://set/theme/light' class='btn'>Light</a> <a href='navi://set/theme/tnn' class='btn'>Neon</a></div>"
             "<div class='card'><h3>🛡️ Privacy</h3>"
             + toggle('block_trackers', 'Block trackers and ads')
             + toggle('https_only', 'HTTPS-only (upgrade http:// links)')
@@ -930,7 +1009,7 @@ class NaviBrowser(QMainWindow):
             "<div class='card'><h3>Clear data</h3>"
             "<p class='small'>Removes cookies and cache held in memory right now. Shortcut: Ctrl+Shift+Delete also closes extra tabs.</p>"
             "<a href='navi://clear' class='btn'>Clear cookies &amp; cache now</a></div>"
-            "<div class='card'><h3>Network</h3>" + modes +
+            "<div class='card'><h3>Connection</h3>" + modes +
             "<p class='small'>Tor mode sends all traffic through a local Tor SOCKS proxy (nothing loads if Tor isn't "
             "running). Switching needs a restart. This hides your IP, but Navi's own browser fingerprint is not "
             "disguised the way Tor Browser's is, so don't rely on it for anonymity.</p>"
@@ -941,7 +1020,7 @@ class NaviBrowser(QMainWindow):
 
     def handle_cmd(self, url_str, view, trusted=True):
         cmd = url_str.replace("navi://", "").replace("app://", "").strip("/")
-        if not trusted and cmd not in self.SAFE_CMDS:
+        if not trusted and cmd not in self.SAFE_CMDS and not cmd.startswith("open/"):
             self.status.showMessage("Blocked: that page isn't allowed to run Navi commands.", 5000)
             return
         arg = unquote(cmd.split("/")[-1])
@@ -964,12 +1043,29 @@ class NaviBrowser(QMainWindow):
 
         elif cmd == "pw":
             cards = "".join(
-                f"<div class='card'><span class='badge'>TNN</span><h3>{html.escape(k)}</h3><p>Online & Decentralized</p>"
-                f"<a href='navi://pw/edit/{quote(k, safe='')}' class='btn'>Edit Source</a></div>"
-                for k in self.data['sites'])
+                f"<div class='card'><span class='badge'>LOCAL</span><h3>{html.escape(k)}</h3><p>Stored on this device</p>"
+                f"<a href='navi://open/{quote(k, safe='')}' class='btn'>Open</a> "
+                f"<a href='navi://pw/edit/{quote(k, safe='')}' class='btn'>Edit Source</a> "
+                f"<a href='navi://pw/delete/{quote(k, safe='')}' class='btn'>Delete</a></div>"
+                for k in self.data['sites']) or "<p class='small'>No sites yet. Create one, or register a domain in the Store.</p>"
             self.show_internal(view, self.wrap(
-                f"<h1>Site Manager</h1><a href='navi://pw/new' class='btn'>+ Create New TNN Site</a>"
+                f"<h1>Local Websites</h1><a href='navi://pw/new' class='btn'>+ Create New Local Site</a>"
                 f"<div class='grid' style='margin-top:20px;'>{cards}</div>"))
+
+        elif cmd.startswith("open/"):
+            key = self.find_site(arg)
+            if key:
+                self.open_site(key, view)
+            else:
+                self.site_not_found(normalize_site_name(arg), view)
+
+        elif cmd.startswith("pw/delete/"):
+            if arg in self.data['sites']:
+                answer = QMessageBox.question(self, "Delete site", f"Delete {arg}? This can't be undone.")
+                if answer == QMessageBox.StandardButton.Yes:
+                    del self.data['sites'][arg]
+                    self.save_data()
+            self.handle_cmd("navi://pw", view)
 
         elif cmd == "pw/new":
             self.editor = CodeEditor(self, "site")
@@ -1000,17 +1096,17 @@ class NaviBrowser(QMainWindow):
 
         elif cmd == "store":
             items = "".join(
-                f"<div class='card'><h3>{tld}</h3><p>Cost: 30 Navits</p><p>Secure decentralized TLD.</p>"
-                f"<a href='navi://buy/{tld}' class='btn'>Register</a></div>"
+                f"<div class='card'><h3>{tld}</h3><p>Cost: 30 Navits</p><p>A site name ending for your local websites.</p>"
+                f"<a href='navi://buy/{tld}' class='btn'>Buy</a></div>"
                 for tld in TNN_TLDS if tld != ".pw-navi")
-            self.show_internal(view, self.wrap(f"<h1>Domain Registry</h1><div class='grid'>{items}</div>"))
+            self.show_internal(view, self.wrap(f"<h1>Name Store</h1><div class='grid'>{items}</div>"))
 
         elif cmd.startswith("buy/"):
             tld = "." + arg.strip(".")
             if tld not in TNN_TLDS:
                 return
             if self.data['navits'] >= 30:
-                name, ok = QInputDialog.getText(self, "Register Domain", f"Choose your {tld} domain name:")
+                name, ok = QInputDialog.getText(self, "Choose a name", f"Choose your {tld} site name:")
                 name = (name or "").strip().lower()
                 if ok and name:
                     if not re.fullmatch(r"[a-z0-9][a-z0-9.-]*", name):
@@ -1025,7 +1121,7 @@ class NaviBrowser(QMainWindow):
                     self.save_data()
                     self.handle_cmd("navi://home", view)
             else:
-                QMessageBox.warning(self, "Insufficient Funds", "You need 30 Navits to buy a TNN domain!")
+                QMessageBox.warning(self, "Insufficient Funds", "You need 30 Navits to buy a site name!")
 
         elif cmd == "settings":
             self.show_internal(view, self.settings_page())
@@ -1057,11 +1153,10 @@ class NaviBrowser(QMainWindow):
             self.handle_cmd("navi://settings", view)
 
         elif cmd.startswith("set/mode/"):
-            if arg in ("cleanweb", "tnn", "tor"):
+            if arg in ("cleanweb", "tor"):
                 old = s.get('network_mode')
                 s['network_mode'] = arg
                 self.save_data()
-                self.apply_network_settings()
                 if old != arg and "tor" in (old, arg):
                     QMessageBox.information(self, "Restart needed",
                                             "Restart Navi for the Tor setting to take effect.")
@@ -1102,14 +1197,6 @@ class NaviBrowser(QMainWindow):
                     "Pages will fail to load. That's on purpose, so your traffic never leaves Tor.\n"
                     "Start Tor (or Tor Browser, which uses port 9150), or switch back to Direct in Settings and restart.")
 
-    def apply_network_settings(self):
-        if self.data['settings']['network_mode'] == "tnn":
-            ip = get_local_ip()
-            for d, info in self.data['sites'].items():
-                if info.get('public'):
-                    if d not in self.data['tnn_registry']: self.data['tnn_registry'][d] = []
-                    if ip not in self.data['tnn_registry'][d]: self.data['tnn_registry'][d].append(ip)
-
     def load_data(self):
         for path in (DATA_FILE, LEGACY_DATA_FILE):
             if os.path.exists(path):
@@ -1123,6 +1210,9 @@ class NaviBrowser(QMainWindow):
                 except Exception:
                     continue
         self.data['settings'].pop('user_agent', None)
+        self.data.pop('tnn_registry', None)
+        if self.data['settings'].get('network_mode') not in ('cleanweb', 'tor'):
+            self.data['settings']['network_mode'] = 'cleanweb'
 
     def save_data(self):
         tmp = DATA_FILE + ".tmp"
