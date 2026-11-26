@@ -1,6 +1,6 @@
 [join our discord server for more information](https://discord.gg/2ps9Fq6fpH)
 
-## 🛠️ How to Build and download
+## 🛠️ How to Build
 
 ### Windows
 
@@ -27,7 +27,7 @@ pip install -r requirements.txt
 Last step:
 
 ```
-python main.py
+python n_main.py
 ```
 
 ### Linux
@@ -61,14 +61,14 @@ pip install PyQt6 PyQt6-WebEngine
 5. Run Navi:
 
 ```bash
-python main.py
+python n_main.py
 ```
 
 Next time, you only need to run these two commands from the `navi-browser` folder:
 
 ```bash
 source venv/bin/activate
-python main.py
+python n_main.py
 ```
 
 **If Navi won't start**, you are probably missing a system library. The usual fix:
@@ -84,7 +84,7 @@ sudo dnf install nss xcb-util-cursor
 sudo pacman -S nss xcb-util-cursor
 ```
 
-If the window looks broken on Wayland, try `QT_QPA_PLATFORM=xcb python main.py`.
+If the window looks broken on Wayland, try `QT_QPA_PLATFORM=xcb python n_main.py`.
 
 **Tor mode on Linux:** install Tor (`sudo apt install tor`, or your distro's equivalent), make sure it is running, then pick Tor in Settings and restart Navi.
 
@@ -95,6 +95,10 @@ that below is the logo if anyone wants it
 # DISCLAIMER:
 
 ### so, navi is probably gonna get an update which is gonna make it closed-source, BUT this version stays open source and you can still use it if you want. you can see the link to the new version below (if it's not there, we aren't done making it.)
+
+this part is honestly not necessary but i'll add it anyways. wait nvm, i got dinner. i'll finish this later.
+
+ok im back guys, anyways. i just wanted to say that this version of navi is PyQt6, but the new version will use ImGui, which is why i added the license. you are still allowed to use this version and copy it, i really dont care, anyways, ImGui version is coming soon!
 
 # navi has gotten a BIG update
 
