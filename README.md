@@ -92,14 +92,80 @@ If the window looks broken on Wayland, try `QT_QPA_PLATFORM=xcb python n_main.py
 
 **Tor mode on Linux:** install Tor (`sudo apt install tor`, or your distro's equivalent), make sure it is running, then pick Tor in Settings and restart Navi.
 
-# DISCLAIMER:
+# features
+## privacy:
+Blocks trackers and advertising domains
+Blocks third-party cookies
+Enables HTTPS-upgrade behavior
+Removes tracking parameters such as utm_*, fbclid, and gclid
+Can block WebGL to reduce fingerprinting
+Blocks browser permission requests such as location, camera, and microphone
+Keeps cookies in memory and does not save browsing history.
 
-### so, navi is probably gonna get an update which is gonna make it closed-source, BUT this version stays open source and you can still use it if you want. you can see the link to the new version below (if it's not there, we aren't done making it.)
+## search engine availability:
 
-this part is honestly not necessary but i'll add it anyways. wait nvm, i got dinner. i'll finish this later.
+   " Mainstream:
+        Google
+        Bing
+        Brave
+        DuckDuckGo
+        Yahoo
+    
+  " Privacy & Indie:
+        Startpage
+        Qwant
+        Searx
+        Mojeek
+        Swisscows
+        Gigablast
+        Metager
+    
+ " Eco & Social:
+        Ecosia
+        OceanHero
+        GiveWater
+        Ekosearch
+    
+   " AI & Research:
+        Perplexity
+        Phind
+        You.com
+        Consensus
+        Google Scholar
+        Wolfram Alpha
+        Dimensions
+    
+   " Global & Specialized:
+        Wikipedia
+        Baidu
+        Naver
+        Yandex
+        Ask
+        YouTube
+        GitHub
+        Reddit
+        Wayback
+        Amazon
+        Twitter
 
-ok im back guys, anyways. i just wanted to say that this version of navi is PyQt6, but the new version will use ImGui, which is why i added the license. you are still allowed to use this version and copy it, i really dont care, anyways, ImGui version is coming soon!
+# more
+Tor/SOCKS support: can route traffic through Tor on ports 9050 or 9150, after a restart.
 
-# navi has gotten a BIG update
+Bookmarks and search history-free navigation.
 
+Download protection: prompts before downloading executable or script formats such as .exe, .bat, .apk, and .sh.
+
+Panic mode: Ctrl+Shift+Delete clears cookies/cache and closes extra tabs.
+
+Dark, light, and neon themes.
+
+Local HTML websites: users can create and store HTML/CSS/JavaScript pages on their own computer under custom .pw-navi-style names.
+
+Name store: spend a built-in “Navit” reward currency to register local site-name suffixes.
+
+Extension lab: write and enable JavaScript snippets, similar to simple browser extensions.
+
+Standard browser shortcuts for tabs, address-bar focus, reload, find, zoom, and navigation.
+
+# yo yo yo
 after a year of not doing shit, i added a lot of privacy features. have fun, i'll probably be gone for months now.
