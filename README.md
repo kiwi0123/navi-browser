@@ -1,7 +1,7 @@
 [join our discord server for more information](https://discord.gg/2ps9Fq6fpH)
 
 ## .exe
-you can download v2.0 at [here](https://github.com/navibrowser/blob/main/NaviBrowser.exe).
+you can download v2.0 at [here](https://github.com/navi-browser/blob/main/NaviBrowser.exe).
 windows will refuse to run, just click "more" and "run anyway"
 
 ## 🛠️ How to Build
