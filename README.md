@@ -92,10 +92,6 @@ If the window looks broken on Wayland, try `QT_QPA_PLATFORM=xcb python n_main.py
 
 **Tor mode on Linux:** install Tor (`sudo apt install tor`, or your distro's equivalent), make sure it is running, then pick Tor in Settings and restart Navi.
 
-that below is the logo if anyone wants it
-
-<img src="betterlogo.png">
-
 # DISCLAIMER:
 
 ### so, navi is probably gonna get an update which is gonna make it closed-source, BUT this version stays open source and you can still use it if you want. you can see the link to the new version below (if it's not there, we aren't done making it.)
